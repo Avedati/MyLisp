@@ -2,6 +2,16 @@
 
 My lisp is a hobby project of mine. It is a minimal, but working and expandable lisp interpreter. It is written in C11.
 
+## Getting Started
+
+To play with this project and test it out for yourself, you will need a c compiler capable of compiling c11. I recommend gcc.
+
+Clone this repository and run:
+```
+make
+./bin/my_lisp <file>
+```
+
 ## How It Works
 
 There are two main parts to this interpreter, lexing and parsing.
@@ -24,13 +34,3 @@ For example, for the tokens
 "(", "+", "1", "2", ")"
 ```
 after we see the "+" function, we will accept the numbers "1" and "2" as arguments, and then add them and push the result onto the stack.
-
-## Getting Started
-
-To play with this project and test it out for yourself, you will need a c compiler capable of compiling c11. I recommend gcc.
-
-Clone this repository and run:
-```
-make
-./bin/my_lisp <file>
-```
