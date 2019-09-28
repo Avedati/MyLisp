@@ -7,6 +7,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+/*
+ char* get_next_token(struct str_it* itr)
+ 
+ This function will return the next token (a string, a number, an operator, etc.)
+ 
+ @param itr A pointer to a str_it struct.
+ @return The next token.
+*/
 char* get_next_token(struct str_it* itr) {
 	if(str_it_c(itr) == -1) { return NULL; }
 	while(isspace(str_it_c(itr))) { itr->it++; }
@@ -47,6 +55,18 @@ char* get_next_token(struct str_it* itr) {
 	return st;
 }
 
+/*
+  char* expect_token(struct str_it* itr, char* value)
+  
+  This function will check if the next available token
+  is equal to the provided value. If so, it will return
+  the token. If not, it will print an error and exit
+  the program with an error code of 1.
+  
+  @param itr A pointer to a str_it struct.
+  @param value The expected token string.
+  @return The next token, if it matches the expected token string.
+*/
 char* expect_token(struct str_it* itr, char* value) {
 	char* tok = get_next_token(itr);
 	if(strcmp(tok, value) != 0) {
@@ -56,6 +76,16 @@ char* expect_token(struct str_it* itr, char* value) {
 	return tok;
 }
 
+/*
+  int isint(char* tok)
+  
+  This function returns 1 if every character in
+  the tok string is from 0-9. Otherwise, this
+  function returns 0.
+  
+  @param tok The token to check.
+  @return 1 if the token is an integer, 0 otherwise.
+*/
 int isint(char* tok) {
 	for(int i=0;i<strlen(tok);i++) {
 		if(!isdigit(tok[i])) { return 0; }
@@ -63,6 +93,17 @@ int isint(char* tok) {
 	return 1;
 }
 
+/*
+  int isint(char* tok)
+  
+  This function returns 1 if every character in
+  the tok string is from 0-9 or is a '.' or
+  an 'e' or an 'E'. Otherwise, this function
+  returns 0.
+  
+  @param tok The token to check.
+  @return 1 if the token is an float, 0 otherwise.
+*/
 int isflt(char* tok) {
 	for(int i=0;i<strlen(tok);i++) {
 		if(!isdigit(tok[i]) && tok[i] != '.' && tok[i] != 'e' && tok[i] != 'E') { return 0; }
@@ -70,10 +111,28 @@ int isflt(char* tok) {
 	return 1;
 }
 
+/*
+  int isstr(char* tok)
+  
+  This function returns 1 if the first
+  character of the tok string is a ' or
+  a ". Otherwise, it returns 0.
+  
+  @param tok The token to check.
+  @return 1 if the token is a string, 0 otherwise.
+*/
 int isstr(char* tok) {
 	return tok[0] == '\'' || tok[0] == '"';
 }
 
+/*
+  int pint(char* tok)
+  
+  This function converts the string to a int.
+  
+  @param tok The token to convert to an int.
+  @return A pointer to the converted int.
+*/
 int* pint(char* tok) {
 	int val = atoi(tok);
 	int* ptr = malloc(sizeof(int*));
@@ -81,6 +140,14 @@ int* pint(char* tok) {
 	return ptr;
 }
 
+/*
+  float* pflt(char* tok)
+  
+  This function converts the string to a float.
+  
+  @param tok The token to convert to an float.
+  @return A pointer to the converted float.
+*/
 float* pflt(char* tok) {
 	float val = atof(tok);
 	float* ptr = malloc(sizeof(float*));
@@ -88,6 +155,17 @@ float* pflt(char* tok) {
 	return ptr;
 }
 
+/*
+  char* pstr(char* tok)
+  
+  This function creates a new string,
+  which contains the value of the tok
+  string with the quotes removed from
+  the beginning and the end.
+  
+  @param tok The token to process.
+  @return A pointer to the processed string.
+*/
 char* pstr(char* tok) {
 	tok++;
 	if(tok[strlen(tok) - 1] == '\'' || tok[strlen(tok) - 1] == '"') {
@@ -99,6 +177,15 @@ char* pstr(char* tok) {
 	return newtok;
 }
 
+/*
+  char* pvar(char* tok)
+  
+  This function copies the source string
+  and returns the copied string.
+  
+  @param tok The token to copy.
+  @return The copied string.
+*/
 char* pvar(char* tok) {
 	char* var = malloc(sizeof(char) * (strlen(tok) + 1));
 	strcpy(var, tok);
@@ -106,14 +193,38 @@ char* pvar(char* tok) {
 	return var;
 }
 
+/*
+  int interpret_next_token(struct lisp* lisp)
+  
+  This function will interpret the next token.
+  
+  @param lisp A pointer to a lisp struct.
+  @return 0 if something went wrong, 1 if nothing went wrong.
+*/
 int interpret_next_token(struct lisp* lisp);
 
+/*
+  struct stack_item* interpret_list(struct lisp* lisp)
+  
+  This function will interpret a lisp list.
+  
+  @param lisp A pointer to a lisp struct.
+  @return A pointer to a new stack_item struct.
+*/
 struct stack_item* interpret_list(struct lisp* lisp) {
 	free(expect_token(lisp->str_it, "("));
 	while(interpret_next_token(lisp)) {}
 	return si_create(SI_LST, lisp->stack);
 }
 
+/*
+  int interpret_next_token(struct lisp* lisp)
+  
+  This function will interpret the next token.
+  
+  @param lisp A pointer to a lisp struct.
+  @return 0 if something went wrong, 1 if nothing went wrong.
+*/
 int interpret_next_token(struct lisp* lisp) {
 	char* tok = get_next_token(lisp->str_it);
 	if     (tok == NULL) { return 0; }
@@ -158,6 +269,13 @@ int interpret_next_token(struct lisp* lisp) {
 	return 1;
 }
 
+/*
+  void lisp__print__(struct lisp* lisp)
+
+  This function is the lisp print function.
+  
+  @param lisp A pointer to a lisp struct.
+*/
 void lisp__print__(struct lisp* lisp) {
 	interpret_next_token(lisp);
 	struct stack_item* si = stack_pop(lisp->stack);
@@ -182,6 +300,13 @@ void lisp__print__(struct lisp* lisp) {
 	}
 }
 
+/*
+  void lisp__add__(struct lisp* lisp)
+
+  This function is the lisp addition function.
+  
+  @param lisp A pointer to a lisp struct.
+*/
 void lisp__add__(struct lisp* lisp) {
 	interpret_next_token(lisp);
 	interpret_next_token(lisp);
@@ -227,6 +352,13 @@ void lisp__add__(struct lisp* lisp) {
 	exit(1);
 }
 
+/*
+  void lisp__sub__(struct lisp* lisp)
+
+  This function is the lisp subtraction function.
+  
+  @param lisp A pointer to a lisp struct.
+*/
 void lisp__sub__(struct lisp* lisp) {
 	interpret_next_token(lisp);
 	interpret_next_token(lisp);
@@ -272,6 +404,13 @@ void lisp__sub__(struct lisp* lisp) {
 	exit(1);
 }
 
+/*
+  void lisp__mul__(struct lisp* lisp)
+
+  This function is the lisp multiplication function.
+  
+  @param lisp A pointer to a lisp struct.
+*/
 void lisp__mul__(struct lisp* lisp) {
 	interpret_next_token(lisp);
 	interpret_next_token(lisp);
@@ -317,6 +456,13 @@ void lisp__mul__(struct lisp* lisp) {
 	exit(1);
 }
 
+/*
+  void lisp__div__(struct lisp* lisp)
+
+  This function is the lisp division function.
+  
+  @param lisp A pointer to a lisp struct.
+*/
 void lisp__div__(struct lisp* lisp) {
 	interpret_next_token(lisp);
 	interpret_next_token(lisp);
@@ -374,6 +520,13 @@ void lisp__div__(struct lisp* lisp) {
 	exit(1);
 }
 
+/*
+  void lisp__cons__(struct lisp* lisp)
+
+  This function is the lisp cons function.
+  
+  @param lisp A pointer to a lisp struct.
+*/
 void lisp__cons__(struct lisp* lisp) {
 	interpret_next_token(lisp);
 	interpret_next_token(lisp);
@@ -385,6 +538,13 @@ void lisp__cons__(struct lisp* lisp) {
 	stack_push(lisp->stack, si_create(SI_LST, (void*)s));
 }
 
+/*
+  void lisp__car__(struct lisp* lisp)
+
+  This function is the lisp car function.
+  
+  @param lisp A pointer to a lisp struct.
+*/
 void lisp__car__(struct lisp* lisp) {
 	interpret_next_token(lisp);
 	struct stack_item* cell = stack_pop(lisp->stack);
@@ -396,6 +556,13 @@ void lisp__car__(struct lisp* lisp) {
 	stack_push(lisp->stack, stack_get(cell_stack, 0));
 }
 
+/*
+  void lisp__cdr__(struct lisp* lisp)
+
+  This function is the lisp cdr function.
+  
+  @param lisp A pointer to a lisp struct.
+*/
 void lisp__cdr__(struct lisp* lisp) {
 	interpret_next_token(lisp);
 	struct stack_item* cell = stack_pop(lisp->stack);
@@ -407,6 +574,13 @@ void lisp__cdr__(struct lisp* lisp) {
 	stack_push(lisp->stack, stack_get(cell_stack, 0));
 }
 
+/*
+  void lisp__set__(struct lisp* lisp)
+
+  This function is the lisp set function.
+  
+  @param lisp A pointer to a lisp struct.
+*/
 void lisp__set__(struct lisp* lisp) {
 	char* tok = get_next_token(lisp->str_it);
 	if(tok == NULL) {
@@ -430,6 +604,13 @@ void lisp__set__(struct lisp* lisp) {
 	sym_table_set(lisp->symbol_table, tok, value);
 }
 
+/*
+  void lisp__read__(struct lisp* lisp)
+
+  This function is the lisp read function.
+  
+  @param lisp A pointer to a lisp struct.
+*/
 void lisp__read__(struct lisp* lisp) {
 	char* result = malloc(0);
 	int num_chars = 0;
@@ -445,6 +626,16 @@ void lisp__read__(struct lisp* lisp) {
 	stack_push(lisp->stack, si_create(SI_STR, result));
 }
 
+/*
+  void interpret(char* str)
+  
+  This function interprets a source string.
+  Before it interpretes the source string, it
+  will define all global functions in the symbol table
+  (add, sub, set, print, etc.)
+  
+  @param str The lisp source string.
+*/
 void interpret(char* str) {
 	struct str_it* itr = str_it_create(str);
 	struct lisp* lisp = lisp_create(itr);
@@ -467,6 +658,23 @@ void interpret(char* str) {
 	lisp_destroy(lisp);
 }
 
+/*
+  int main(int argc, char** argv)
+  
+  This function is called at the start
+  of the program. We will try to use
+  the users command line arguments to
+  open a file, read lisp from it, and
+  interpret that lisp. Otherwise, we
+  will print an error message if we cannot
+  open the file, and we will exit the
+  program.
+  
+  @param argc The number of command line arguments ( >= 1 ).
+  @param argv The command line arguments.
+  @return The exit code of the program
+          (0 if nothing went wrong, 1-255 if something went wrong).
+*/
 int main(int argc, char** argv) {
 	if(argc > 1) {
 		FILE* fp = fopen(argv[1], "r");
