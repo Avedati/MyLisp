@@ -1,0 +1,8 @@
+(set i 1)
+(set f 1.0)
+(set s 'test')
+(set l (cons 2 2))
+(print i)
+(print f)
+(print s)
+(print l)
