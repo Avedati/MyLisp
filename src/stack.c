@@ -131,6 +131,9 @@ struct stack_item* stack_get(struct stack* s, int i) {
   @return The stack item at the top of the stack.
 */
 struct stack_item* stack_pop(struct stack* s) {
-	return s->items[--(s->len)];
+	if(s->len >= 0) {
+		return s->items[--(s->len)];
+	}
+	return NULL;
 }
 

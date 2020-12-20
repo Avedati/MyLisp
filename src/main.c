@@ -6,17 +6,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 void lisp__set__(struct lisp*);
 void lisp__print__(struct lisp*);
 void lisp__read__(struct lisp*);
+void lisp__random__(struct lisp*);
 void lisp__add__(struct lisp*);
 void lisp__sub__(struct lisp*);
 void lisp__mul__(struct lisp*);
 void lisp__div__(struct lisp*);
+void lisp__assert__(struct lisp*);
+void lisp__eq__(struct lisp*);
+void lisp__not__(struct lisp*);
+void lisp__or__(struct lisp*);
+void lisp__and__(struct lisp*);
+void lisp__lt__(struct lisp*);
+void lisp__gt__(struct lisp*);
+void lisp__le__(struct lisp*);
+void lisp__ge__(struct lisp*);
 void lisp__cons__(struct lisp*);
 void lisp__car__(struct lisp*);
 void lisp__cdr__(struct lisp*);
+void lisp__if__(struct lisp*);
 
 /*
  char* get_next_token(struct str_it* itr)
@@ -222,9 +234,20 @@ int interpret_next_token(struct lisp* lisp);
   @param lisp A pointer to a lisp struct.
   @return A pointer to a new stack_item struct.
 */
-struct stack_item* interpret_list(struct lisp* lisp) {
-	while(interpret_next_token(lisp)) {}
-	return si_create(SI_LST, lisp->stack);
+void interpret_list(struct lisp* lisp) {
+	int count = 0;
+	while(interpret_next_token(lisp)) { count++; }
+	if(count == 1) {
+		return;
+	}
+	struct stack* stack = stack_create();
+	for(int i=0;i<count;i++) {
+		stack_push(stack, stack_get(lisp->stack, lisp->stack->len - count + i));
+	}
+	for(int i=0;i<count;i++) {
+		stack_pop(lisp->stack);
+	}
+	stack_push(lisp->stack, si_create(SI_LST, stack));
 }
 
 /*
@@ -247,7 +270,7 @@ int interpret_next_token(struct lisp* lisp) {
 			free(tok);
 		}
 		else if(strcmp(tok, "(") == 0) {
-			stack_push(lisp->stack, interpret_list(lisp));
+			interpret_list(lisp);
 			free(tok);
 		}
 		else if(strcmp(tok, ")") == 0) {
@@ -263,13 +286,26 @@ int interpret_next_token(struct lisp* lisp) {
 			else if(strcmp(tok, "set") == 0) { lisp__set__(lisp); free(tok); return 1; }
 			else if(strcmp(tok, "print") == 0) { lisp__print__(lisp); free(tok); return 1; }
 			else if(strcmp(tok, "read") == 0) { lisp__read__(lisp); free(tok); return 1; }
+			else if(strcmp(tok, "random") == 0) { lisp__random__(lisp); free(tok); return 1; }
 			else if(strcmp(tok, "+") == 0) { lisp__add__(lisp); free(tok); return 1; }
 			else if(strcmp(tok, "-") == 0) { lisp__sub__(lisp); free(tok); return 1; }
 			else if(strcmp(tok, "*") == 0) { lisp__mul__(lisp); free(tok); return 1; }
 			else if(strcmp(tok, "/") == 0) { lisp__div__(lisp); free(tok); return 1; }
+			else if(strcmp(tok, "not") == 0) { lisp__not__(lisp); free(tok); return 1; }
+			else if(strcmp(tok, "or") == 0) { lisp__or__(lisp); free(tok); return 1; }
+			else if(strcmp(tok, "and") == 0) { lisp__and__(lisp); free(tok); return 1; }
+			else if(strcmp(tok, "eq?") == 0) { lisp__eq__(lisp); free(tok); return 1; }
+			else if(strcmp(tok, "equal") == 0) { lisp__eq__(lisp); free(tok); return 1; }
+			else if(strcmp(tok, "assert") == 0) { lisp__assert__(lisp); free(tok); return 1; }
+			else if(strcmp(tok, "=") == 0) { lisp__eq__(lisp); free(tok); return 1; }
+			else if(strcmp(tok, ">") == 0) { lisp__gt__(lisp); free(tok); return 1; }
+			else if(strcmp(tok, "<") == 0) { lisp__lt__(lisp); free(tok); return 1; }
+			else if(strcmp(tok, ">=") == 0) { lisp__ge__(lisp); free(tok); return 1; }
+			else if(strcmp(tok, "<=") == 0) { lisp__le__(lisp); free(tok); return 1; }
 			else if(strcmp(tok, "cons") == 0) { lisp__cons__(lisp); free(tok); return 1; }
 			else if(strcmp(tok, "car") == 0) { lisp__car__(lisp); free(tok); return 1; }
 			else if(strcmp(tok, "cdr") == 0) { lisp__cdr__(lisp); free(tok); return 1; }
+			else if(strcmp(tok, "cond") == 0) { lisp__if__(lisp); free(tok); return 1; }
 			else {
 				stack_push(lisp->stack, si_create(SI_VAR, pvar(tok)));
 			}
@@ -311,6 +347,42 @@ void lisp__print__(struct lisp* lisp) {
 }
 
 /*
+  void lisp__read__(struct lisp* lisp)
+
+  This function is the lisp read function.
+  
+  @param lisp A pointer to a lisp struct.
+*/
+void lisp__read__(struct lisp* lisp) {
+	char* result = malloc(0);
+	int num_chars = 0;
+	char c;
+	while(1) {
+		c = getchar();
+		if(c == EOF || c == '\n') { break; }
+		result = realloc(result, sizeof(char) * (num_chars + 1));
+		result[num_chars++] = c;
+	}
+	result = realloc(result, sizeof(char) * (num_chars + 1));
+	result[num_chars] = 0;
+	stack_push(lisp->stack, si_create(SI_STR, result));
+}
+
+void lisp__random__(struct lisp* lisp) {
+	interpret_next_token(lisp);
+	struct stack_item* si = stack_pop(lisp->stack);
+	if(si->type == SI_INT) {
+		int value = *((int*)(si->value));
+		int* result = malloc(sizeof(int));
+		*result = rand() % value;
+		stack_push(lisp->stack, si_create(SI_INT, result));
+		return;
+	}
+	fprintf(stderr, "Error: can only generate random integers, and must have a limit.\n");
+	exit(1);
+}
+
+/*
   void lisp__add__(struct lisp* lisp)
 
   This function is the lisp addition function.
@@ -326,7 +398,7 @@ void lisp__add__(struct lisp* lisp) {
 		if(fst->type == SI_INT) {
 			int v1 = *((int*)(fst->value));
 			int v2 = *((int*)(snd->value));
-			int* result = malloc(sizeof(int*));
+			int* result = malloc(sizeof(int));
 			*result = (v1 + v2);
 			stack_push(lisp->stack, si_create(SI_INT, result));
 			return;
@@ -334,7 +406,7 @@ void lisp__add__(struct lisp* lisp) {
 		else if(fst->type == SI_FLT) {
 			float v1 = *((float*)(fst->value));
 			float v2 = *((float*)(snd->value));
-			float* result = malloc(sizeof(float*));
+			float* result = malloc(sizeof(float));
 			*result = (v1 + v2);
 			stack_push(lisp->stack, si_create(SI_FLT, result));
 			return;
@@ -344,7 +416,7 @@ void lisp__add__(struct lisp* lisp) {
 		if(fst->type == SI_INT && snd->type == SI_FLT) {
 			int v1 = *((int*)(fst->value));
 			float v2 = *((float*)(snd->value));
-			float* result = malloc(sizeof(float*));
+			float* result = malloc(sizeof(float));
 			*result = (v1 + v2);
 			stack_push(lisp->stack, si_create(SI_FLT, result));
 			return;
@@ -352,7 +424,7 @@ void lisp__add__(struct lisp* lisp) {
 		else if(fst->type == SI_FLT && snd->type == SI_INT) {
 			float v1 = *((float*)(fst->value));
 			int v2 = *((int*)(snd->value));
-			float* result = malloc(sizeof(float*));
+			float* result = malloc(sizeof(float));
 			*result = (v1 + v2);
 			stack_push(lisp->stack, si_create(SI_FLT, result));
 			return;
@@ -378,7 +450,7 @@ void lisp__sub__(struct lisp* lisp) {
 		if(fst->type == SI_INT) {
 			int v1 = *((int*)(fst->value));
 			int v2 = *((int*)(snd->value));
-			int* result = malloc(sizeof(int*));
+			int* result = malloc(sizeof(int));
 			*result = (v1 - v2);
 			stack_push(lisp->stack, si_create(SI_INT, result));
 			return;
@@ -386,7 +458,7 @@ void lisp__sub__(struct lisp* lisp) {
 		else if(fst->type == SI_FLT) {
 			float v1 = *((float*)(fst->value));
 			float v2 = *((float*)(snd->value));
-			float* result = malloc(sizeof(float*));
+			float* result = malloc(sizeof(float));
 			*result = (v1 - v2);
 			stack_push(lisp->stack, si_create(SI_FLT, result));
 			return;
@@ -396,7 +468,7 @@ void lisp__sub__(struct lisp* lisp) {
 		if(fst->type == SI_INT && snd->type == SI_FLT) {
 			int v1 = *((int*)(fst->value));
 			float v2 = *((float*)(snd->value));
-			float* result = malloc(sizeof(float*));
+			float* result = malloc(sizeof(float));
 			*result = (v1 - v2);
 			stack_push(lisp->stack, si_create(SI_FLT, result));
 			return;
@@ -404,7 +476,7 @@ void lisp__sub__(struct lisp* lisp) {
 		else if(fst->type == SI_FLT && snd->type == SI_INT) {
 			float v1 = *((float*)(fst->value));
 			int v2 = *((int*)(snd->value));
-			float* result = malloc(sizeof(float*));
+			float* result = malloc(sizeof(float));
 			*result = (v1 - v2);
 			stack_push(lisp->stack, si_create(SI_FLT, result));
 			return;
@@ -430,7 +502,7 @@ void lisp__mul__(struct lisp* lisp) {
 		if(fst->type == SI_INT) {
 			int v1 = *((int*)(fst->value));
 			int v2 = *((int*)(snd->value));
-			int* result = malloc(sizeof(int*));
+			int* result = malloc(sizeof(int));
 			*result = (v1 * v2);
 			stack_push(lisp->stack, si_create(SI_INT, result));
 			return;
@@ -438,7 +510,7 @@ void lisp__mul__(struct lisp* lisp) {
 		else if(fst->type == SI_FLT) {
 			float v1 = *((float*)(fst->value));
 			float v2 = *((float*)(snd->value));
-			float* result = malloc(sizeof(float*));
+			float* result = malloc(sizeof(float));
 			*result = (v1 * v2);
 			stack_push(lisp->stack, si_create(SI_FLT, result));
 			return;
@@ -448,7 +520,7 @@ void lisp__mul__(struct lisp* lisp) {
 		if(fst->type == SI_INT && snd->type == SI_FLT) {
 			int v1 = *((int*)(fst->value));
 			float v2 = *((float*)(snd->value));
-			float* result = malloc(sizeof(float*));
+			float* result = malloc(sizeof(float));
 			*result = (v1 * v2);
 			stack_push(lisp->stack, si_create(SI_FLT, result));
 			return;
@@ -456,7 +528,7 @@ void lisp__mul__(struct lisp* lisp) {
 		else if(fst->type == SI_FLT && snd->type == SI_INT) {
 			float v1 = *((float*)(fst->value));
 			int v2 = *((int*)(snd->value));
-			float* result = malloc(sizeof(float*));
+			float* result = malloc(sizeof(float));
 			*result = (v1 * v2);
 			stack_push(lisp->stack, si_create(SI_FLT, result));
 			return;
@@ -485,7 +557,7 @@ void lisp__div__(struct lisp* lisp) {
 			if(v2 == 0) {
 				fprintf(stderr, "Error: cannot divide by zero\n");
 			}
-			int* result = malloc(sizeof(int*));
+			int* result = malloc(sizeof(int));
 			*result = (v1 / v2);
 			stack_push(lisp->stack, si_create(SI_INT, result));
 			return;
@@ -496,7 +568,7 @@ void lisp__div__(struct lisp* lisp) {
 			if(v2 == 0) {
 				fprintf(stderr, "Error: cannot divide by zero\n");
 			}
-			float* result = malloc(sizeof(float*));
+			float* result = malloc(sizeof(float));
 			*result = (v1 / v2);
 			stack_push(lisp->stack, si_create(SI_FLT, result));
 			return;
@@ -509,7 +581,7 @@ void lisp__div__(struct lisp* lisp) {
 			if(v2 == 0) {
 				fprintf(stderr, "Error: cannot divide by zero\n");
 			}
-			float* result = malloc(sizeof(float*));
+			float* result = malloc(sizeof(float));
 			*result = (v1 / v2);
 			stack_push(lisp->stack, si_create(SI_FLT, result));
 			return;
@@ -520,7 +592,7 @@ void lisp__div__(struct lisp* lisp) {
 			if(v2 == 0) {
 				fprintf(stderr, "Error: cannot divide by zero\n");
 			}
-			float* result = malloc(sizeof(float*));
+			float* result = malloc(sizeof(float));
 			*result = (v1 / v2);
 			stack_push(lisp->stack, si_create(SI_FLT, result));
 			return;
@@ -529,6 +601,312 @@ void lisp__div__(struct lisp* lisp) {
 	fprintf(stderr, "Error: can only divide ints and floats.\n");
 	exit(1);
 }
+
+void lisp__assert__(struct lisp* lisp) {
+	interpret_next_token(lisp);
+	struct stack_item* item = stack_pop(lisp->stack);
+	if(item->type != SI_INT) {
+		fprintf(stderr, "Error: can only assert on an int.\n");
+		exit(1);
+	}
+	int value = *((int*)(item->value));
+	if(value == 0) {
+		fprintf(stderr, "Error: assertion failed.\n");
+		exit(1);
+	}
+}
+
+void lisp__eq__(struct lisp* lisp) {
+	interpret_next_token(lisp);
+	interpret_next_token(lisp);
+	struct stack_item* snd = stack_pop(lisp->stack);
+	struct stack_item* fst = stack_pop(lisp->stack);
+	if(fst->type == snd->type) {
+		if(fst->type == SI_INT) {
+			int v1 = *((int*)(fst->value));
+			int v2 = *((int*)(snd->value));
+			int* result = malloc(sizeof(int*));
+			*result = (v1 == v2);
+			stack_push(lisp->stack, si_create(SI_INT, result));
+			return;
+		}
+		else if(fst->type == SI_FLT) {
+			float v1 = *((float*)(fst->value));
+			float v2 = *((float*)(snd->value));
+			int* result = malloc(sizeof(int));
+			*result = (v1 == v2);
+			stack_push(lisp->stack, si_create(SI_INT, result));
+			return;
+		}
+		else if(fst->type == SI_STR) {
+			char* v1 = (char*)fst->value;
+			char* v2 = (char*)snd->value;
+			int* result = malloc(sizeof(int));
+			*result = (strcmp(v1, v2) == 0) ? 1 : 0;
+			stack_push(lisp->stack, si_create(SI_INT, result));
+			return;
+		}
+	}
+	else {
+		if(fst->type == SI_INT && snd->type == SI_FLT) {
+			int v1 = *((int*)(fst->value));
+			float v2 = *((float*)(snd->value));
+			int* result = malloc(sizeof(int));
+			*result = (v1 == v2);
+			stack_push(lisp->stack, si_create(SI_INT, result));
+			return;
+		}
+		else if(fst->type == SI_FLT && snd->type == SI_INT) {
+			float v1 = *((float*)(fst->value));
+			int v2 = *((int*)(snd->value));
+			int* result = malloc(sizeof(int));
+			*result = (v1 == v2);
+			stack_push(lisp->stack, si_create(SI_INT, result));
+			return;
+		}
+	}
+	fprintf(stderr, "Error: can only compare ints, floats, and strings.\n");
+	exit(1);
+}
+
+void lisp__not__(struct lisp* lisp) {
+	interpret_next_token(lisp);
+	struct stack_item* item = stack_pop(lisp->stack);
+	if(item->type == SI_INT) {
+		int value = *((int*)(item->value));
+		int* result = malloc(sizeof(int));
+		*result = value == 0 ? 1 : 0;
+		stack_push(lisp->stack, si_create(SI_INT, result));
+		return;
+	}
+	fprintf(stderr, "Error: can only negate ints.\n");
+	exit(1);
+}
+
+void lisp__or__(struct lisp* lisp) {
+	interpret_next_token(lisp);
+	interpret_next_token(lisp);
+	struct stack_item* snd = stack_pop(lisp->stack);
+	struct stack_item* fst = stack_pop(lisp->stack);
+	if(fst->type == SI_INT && snd->type == SI_INT) {
+		int v1 = *((int*)(fst->value));
+		int v2 = *((int*)(snd->value));
+		int* result = malloc(sizeof(int));
+		if(v1 == 1 || v2 == 1) {
+			*result = 1;
+		}
+		else {
+			*result = 0;
+		}
+		stack_push(lisp->stack, si_create(SI_INT, result));
+		return;
+	}
+	fprintf(stderr, "Error: can only perform `or` on ints.\n");
+	exit(1);
+}
+
+void lisp__and__(struct lisp* lisp) {
+	interpret_next_token(lisp);
+	interpret_next_token(lisp);
+	struct stack_item* snd = stack_pop(lisp->stack);
+	struct stack_item* fst = stack_pop(lisp->stack);
+	if(fst->type == SI_INT && snd->type == SI_INT) {
+		int v1 = *((int*)(fst->value));
+		int v2 = *((int*)(snd->value));
+		int* result = malloc(sizeof(int));
+		if(v1 == 1 && v2 == 1) {
+			*result = 1;
+		}
+		else {
+			*result = 0;
+		}
+		stack_push(lisp->stack, si_create(SI_INT, result));
+		return;
+	}
+	fprintf(stderr, "Error: can only perform `and` on ints.\n");
+	exit(1);
+}
+
+void lisp__lt__(struct lisp* lisp) {
+	interpret_next_token(lisp);
+	interpret_next_token(lisp);
+	struct stack_item* snd = stack_pop(lisp->stack);
+	struct stack_item* fst = stack_pop(lisp->stack);
+	if(fst->type == snd->type) {
+		if(fst->type == SI_INT) {
+			int v1 = *((int*)(fst->value));
+			int v2 = *((int*)(snd->value));
+			int* result = malloc(sizeof(int*));
+			*result = (v1 < v2);
+			stack_push(lisp->stack, si_create(SI_INT, result));
+			return;
+		}
+		else if(fst->type == SI_FLT) {
+			float v1 = *((float*)(fst->value));
+			float v2 = *((float*)(snd->value));
+			int* result = malloc(sizeof(int));
+			*result = (v1 < v2);
+			stack_push(lisp->stack, si_create(SI_INT, result));
+			return;
+		}
+	}
+	else {
+		if(fst->type == SI_INT && snd->type == SI_FLT) {
+			int v1 = *((int*)(fst->value));
+			float v2 = *((float*)(snd->value));
+			int* result = malloc(sizeof(int));
+			*result = (v1 < v2);
+			stack_push(lisp->stack, si_create(SI_INT, result));
+			return;
+		}
+		else if(fst->type == SI_FLT && snd->type == SI_INT) {
+			float v1 = *((float*)(fst->value));
+			int v2 = *((int*)(snd->value));
+			int* result = malloc(sizeof(int));
+			*result = (v1 < v2);
+			stack_push(lisp->stack, si_create(SI_INT, result));
+			return;
+		}
+	}
+	fprintf(stderr, "Error: can only compare ints and floats.\n");
+	exit(1);
+}
+
+void lisp__gt__(struct lisp* lisp) {
+	interpret_next_token(lisp);
+	interpret_next_token(lisp);
+	struct stack_item* snd = stack_pop(lisp->stack);
+	struct stack_item* fst = stack_pop(lisp->stack);
+	if(fst->type == snd->type) {
+		if(fst->type == SI_INT) {
+			int v1 = *((int*)(fst->value));
+			int v2 = *((int*)(snd->value));
+			int* result = malloc(sizeof(int*));
+			*result = (v1 > v2);
+			stack_push(lisp->stack, si_create(SI_INT, result));
+			return;
+		}
+		else if(fst->type == SI_FLT) {
+			float v1 = *((float*)(fst->value));
+			float v2 = *((float*)(snd->value));
+			int* result = malloc(sizeof(int));
+			*result = (v1 > v2);
+			stack_push(lisp->stack, si_create(SI_INT, result));
+			return;
+		}
+	}
+	else {
+		if(fst->type == SI_INT && snd->type == SI_FLT) {
+			int v1 = *((int*)(fst->value));
+			float v2 = *((float*)(snd->value));
+			int* result = malloc(sizeof(int));
+			*result = (v1 > v2);
+			stack_push(lisp->stack, si_create(SI_INT, result));
+			return;
+		}
+		else if(fst->type == SI_FLT && snd->type == SI_INT) {
+			float v1 = *((float*)(fst->value));
+			int v2 = *((int*)(snd->value));
+			int* result = malloc(sizeof(int));
+			*result = (v1 > v2);
+			stack_push(lisp->stack, si_create(SI_INT, result));
+			return;
+		}
+	}
+	fprintf(stderr, "Error: can only compare ints and floats.\n");
+	exit(1);
+}
+
+void lisp__le__(struct lisp* lisp) {
+	interpret_next_token(lisp);
+	interpret_next_token(lisp);
+	struct stack_item* snd = stack_pop(lisp->stack);
+	struct stack_item* fst = stack_pop(lisp->stack);
+	if(fst->type == snd->type) {
+		if(fst->type == SI_INT) {
+			int v1 = *((int*)(fst->value));
+			int v2 = *((int*)(snd->value));
+			int* result = malloc(sizeof(int*));
+			*result = (v1 <= v2);
+			stack_push(lisp->stack, si_create(SI_INT, result));
+			return;
+		}
+		else if(fst->type == SI_FLT) {
+			float v1 = *((float*)(fst->value));
+			float v2 = *((float*)(snd->value));
+			int* result = malloc(sizeof(int));
+			*result = (v1 <= v2);
+			stack_push(lisp->stack, si_create(SI_INT, result));
+			return;
+		}
+	}
+	else {
+		if(fst->type == SI_INT && snd->type == SI_FLT) {
+			int v1 = *((int*)(fst->value));
+			float v2 = *((float*)(snd->value));
+			int* result = malloc(sizeof(int));
+			*result = (v1 <= v2);
+			stack_push(lisp->stack, si_create(SI_INT, result));
+			return;
+		}
+		else if(fst->type == SI_FLT && snd->type == SI_INT) {
+			float v1 = *((float*)(fst->value));
+			int v2 = *((int*)(snd->value));
+			int* result = malloc(sizeof(int));
+			*result = (v1 <= v2);
+			stack_push(lisp->stack, si_create(SI_INT, result));
+			return;
+		}
+	}
+	fprintf(stderr, "Error: can only compare ints and floats.\n");
+	exit(1);
+}
+
+void lisp__ge__(struct lisp* lisp) {
+	interpret_next_token(lisp);
+	interpret_next_token(lisp);
+	struct stack_item* snd = stack_pop(lisp->stack);
+	struct stack_item* fst = stack_pop(lisp->stack);
+	if(fst->type == snd->type) {
+		if(fst->type == SI_INT) {
+			int v1 = *((int*)(fst->value));
+			int v2 = *((int*)(snd->value));
+			int* result = malloc(sizeof(int*));
+			*result = (v1 >= v2);
+			stack_push(lisp->stack, si_create(SI_INT, result));
+			return;
+		}
+		else if(fst->type == SI_FLT) {
+			float v1 = *((float*)(fst->value));
+			float v2 = *((float*)(snd->value));
+			int* result = malloc(sizeof(int));
+			*result = (v1 >= v2);
+			stack_push(lisp->stack, si_create(SI_INT, result));
+			return;
+		}
+	}
+	else {
+		if(fst->type == SI_INT && snd->type == SI_FLT) {
+			int v1 = *((int*)(fst->value));
+			float v2 = *((float*)(snd->value));
+			int* result = malloc(sizeof(int));
+			*result = (v1 >= v2);
+			stack_push(lisp->stack, si_create(SI_INT, result));
+			return;
+		}
+		else if(fst->type == SI_FLT && snd->type == SI_INT) {
+			float v1 = *((float*)(fst->value));
+			int v2 = *((int*)(snd->value));
+			int* result = malloc(sizeof(int));
+			*result = (v1 >= v2);
+			stack_push(lisp->stack, si_create(SI_INT, result));
+			return;
+		}
+	}
+	fprintf(stderr, "Error: can only compare ints and floats.\n");
+	exit(1);
+}
+
 
 /*
   void lisp__cons__(struct lisp* lisp)
@@ -614,26 +992,31 @@ void lisp__set__(struct lisp* lisp) {
 	sym_table_set(lisp->symbol_table, tok, value);
 }
 
-/*
-  void lisp__read__(struct lisp* lisp)
-
-  This function is the lisp read function.
-  
-  @param lisp A pointer to a lisp struct.
-*/
-void lisp__read__(struct lisp* lisp) {
-	char* result = malloc(0);
-	int num_chars = 0;
-	char c;
-	while(1) {
-		c = getchar();
-		if(c == EOF || c == '\n') { break; }
-		result = realloc(result, sizeof(char) * (num_chars + 1));
-		result[num_chars++] = c;
+void lisp__if__(struct lisp* lisp) {
+	interpret_next_token(lisp);
+	struct stack_item* item = stack_pop(lisp->stack);
+	if(item->type != SI_INT) {
+		fprintf(stderr, "Error: expected int for condition.");
+		exit(1);
 	}
-	result = realloc(result, sizeof(char) * (num_chars + 1));
-	result[num_chars] = 0;
-	stack_push(lisp->stack, si_create(SI_STR, result));
+	int value = *((int*)(item->value));
+	if(value == 1) {
+		interpret_next_token(lisp);
+	}
+	else {
+		char* tok;
+		int n = 1;
+		free(expect_token(lisp->str_it, "("));
+		while(n > 0) {
+			tok = get_next_token(lisp->str_it);
+			if(tok == NULL) {
+				fprintf(stderr, "Error: expected `)`, got NULL.");
+				exit(1);
+			} 
+			else if(strcmp(tok, "(") == 0) { n++; }
+			else if(strcmp(tok, ")") == 0) { n--; }
+		}
+	}
 }
 
 /*
@@ -650,11 +1033,7 @@ void interpret(char* str) {
 	struct str_it* itr = str_it_create(str);
 	struct lisp* lisp = lisp_create(itr);
 	while(lisp->str_it->it < strlen(str)) {
-		struct stack_item* s = interpret_list(lisp);
-		struct stack* stk = (struct stack*)(s->value);
-		for(int i=0;i<stk->len;i++) {
-			si_destroy(stk->items[i]);
-		}
+		interpret_list(lisp);
 	}
 	lisp_destroy(lisp);
 }
@@ -677,6 +1056,7 @@ void interpret(char* str) {
           (0 if nothing went wrong, 1-255 if something went wrong).
 */
 int main(int argc, char** argv) {
+	srand(time(0));
 	if(argc > 1) {
 		FILE* fp = fopen(argv[1], "r");
 		if(!fp) {
@@ -694,7 +1074,8 @@ int main(int argc, char** argv) {
 		interpret(buf);
 	}
 	else {
-		char* example_program = "( print + 1 2 )";
+		char* example_program = (char*)malloc(sizeof(char) * 20);
+		strcpy(example_program, "( print ( + 1 2 ) )");
 		interpret(example_program);
 	}
 	return 0;
