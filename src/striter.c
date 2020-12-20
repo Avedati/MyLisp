@@ -1,4 +1,5 @@
 #include "../include/striter.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -14,10 +15,8 @@
   @return A new pointer to the str_it struct.
 */
 struct str_it* str_it_create(char* str) {
-	struct str_it* itr = (struct str_it*)malloc(sizeof(struct str_it*));
-	itr->str = malloc(strlen(str) + 1);
-	strcpy(itr->str, str);
-	strcat(itr->str, "\0");
+	struct str_it* itr = (struct str_it*)malloc(sizeof(struct str_it));
+	itr->str = str;
 	itr->it = 0;
 	return itr;
 }
@@ -46,5 +45,9 @@ void str_it_destroy(struct str_it* itr) {
   @return The current char, if applicable. Otherwise, -1.
 */
 char str_it_c(struct str_it* itr) {
-	return (itr->it < 0 || itr->it >= strlen(itr->str)) ? -1 : itr->str[itr->it];
+	//printf("%d, %lu\n", itr->it, strlen(itr->str));
+	if(itr->it < 0 || itr->it >= strlen(itr->str)) {
+		return -1;
+	}
+	return itr->str[itr->it];
 }

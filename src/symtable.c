@@ -12,7 +12,7 @@
   @return A new pointer to the symbol_table struct.
 */
 struct symbol_table* sym_table_create(void) {
-	struct symbol_table* s = malloc(sizeof(struct symbol_table*));
+	struct symbol_table* s = malloc(sizeof(struct symbol_table));
 	s->len = 0;
 	s->keys = malloc(0);
 	s->values = malloc(0);

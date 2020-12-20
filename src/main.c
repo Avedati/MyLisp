@@ -7,6 +7,17 @@
 #include <stdlib.h>
 #include <string.h>
 
+void lisp__set__(struct lisp*);
+void lisp__print__(struct lisp*);
+void lisp__read__(struct lisp*);
+void lisp__add__(struct lisp*);
+void lisp__sub__(struct lisp*);
+void lisp__mul__(struct lisp*);
+void lisp__div__(struct lisp*);
+void lisp__cons__(struct lisp*);
+void lisp__car__(struct lisp*);
+void lisp__cdr__(struct lisp*);
+
 /*
  char* get_next_token(struct str_it* itr)
  
@@ -69,7 +80,7 @@ char* get_next_token(struct str_it* itr) {
 */
 char* expect_token(struct str_it* itr, char* value) {
 	char* tok = get_next_token(itr);
-	if(strcmp(tok, value) != 0) {
+	if(tok == NULL || strcmp(tok, value) != 0) {
 		fprintf(stderr, "Error: expected `%s`, got `%s`", value, tok);
 		exit(1);
 	}
@@ -212,7 +223,6 @@ int interpret_next_token(struct lisp* lisp);
   @return A pointer to a new stack_item struct.
 */
 struct stack_item* interpret_list(struct lisp* lisp) {
-	free(expect_token(lisp->str_it, "("));
 	while(interpret_next_token(lisp)) {}
 	return si_create(SI_LST, lisp->stack);
 }
@@ -247,22 +257,22 @@ int interpret_next_token(struct lisp* lisp) {
 		else {
 			if(sym_table_lookup(lisp->symbol_table, tok) != NULL) {
 				stack_push(lisp->stack, (struct stack_item*)sym_table_lookup(lisp->symbol_table, tok));
+				free(tok);
 				return 1;
 			}
-			char* st = malloc(sizeof(char) * (strlen(tok) + 2));
-			st[0] = ' ';
-			int i;
-			for(i=0;i<strlen(tok);i++) {
-				st[i+1] = tok[i];
+			else if(strcmp(tok, "set") == 0) { lisp__set__(lisp); free(tok); return 1; }
+			else if(strcmp(tok, "print") == 0) { lisp__print__(lisp); free(tok); return 1; }
+			else if(strcmp(tok, "read") == 0) { lisp__read__(lisp); free(tok); return 1; }
+			else if(strcmp(tok, "+") == 0) { lisp__add__(lisp); free(tok); return 1; }
+			else if(strcmp(tok, "-") == 0) { lisp__sub__(lisp); free(tok); return 1; }
+			else if(strcmp(tok, "*") == 0) { lisp__mul__(lisp); free(tok); return 1; }
+			else if(strcmp(tok, "/") == 0) { lisp__div__(lisp); free(tok); return 1; }
+			else if(strcmp(tok, "cons") == 0) { lisp__cons__(lisp); free(tok); return 1; }
+			else if(strcmp(tok, "car") == 0) { lisp__car__(lisp); free(tok); return 1; }
+			else if(strcmp(tok, "cdr") == 0) { lisp__cdr__(lisp); free(tok); return 1; }
+			else {
+				stack_push(lisp->stack, si_create(SI_VAR, pvar(tok)));
 			}
-			st[i+1] = 0;
-			if(sym_table_lookup(lisp->symbol_table, st) != NULL) {
-				(*((void(*)(struct lisp*))(sym_table_lookup(lisp->symbol_table, st))))(lisp);
-				free(st);
-				return 1;
-			}
-			free(st);
-			stack_push(lisp->stack, si_create(SI_VAR, pvar(tok)));
 			free(tok);
 		}
 	}
@@ -639,22 +649,13 @@ void lisp__read__(struct lisp* lisp) {
 void interpret(char* str) {
 	struct str_it* itr = str_it_create(str);
 	struct lisp* lisp = lisp_create(itr);
-	sym_table_set(lisp->symbol_table, " set", (void*)(&lisp__set__));
-	sym_table_set(lisp->symbol_table, " print", (void*)(&lisp__print__));
-	sym_table_set(lisp->symbol_table, " read", (void*)(&lisp__read__));
-	sym_table_set(lisp->symbol_table, " +", (void*)(&lisp__add__));
-	sym_table_set(lisp->symbol_table, " -", (void*)(&lisp__sub__));
-	sym_table_set(lisp->symbol_table, " *", (void*)(&lisp__mul__));
-	sym_table_set(lisp->symbol_table, " /", (void*)(&lisp__div__));
-	sym_table_set(lisp->symbol_table, " cons", (void*)(&lisp__cons__));
-	sym_table_set(lisp->symbol_table, " car", (void*)(&lisp__car__));
-	sym_table_set(lisp->symbol_table, " cdr", (void*)(&lisp__cdr__));
-	struct stack_item* s = interpret_list(lisp);
-	struct stack* stk = (struct stack*)(s->value);
-	for(int i=0;i<stk->len;i++) {
-		si_destroy(stk->items[i]);
+	while(lisp->str_it->it < strlen(str)) {
+		struct stack_item* s = interpret_list(lisp);
+		struct stack* stk = (struct stack*)(s->value);
+		for(int i=0;i<stk->len;i++) {
+			si_destroy(stk->items[i]);
+		}
 	}
-	si_destroy(s);
 	lisp_destroy(lisp);
 }
 
@@ -688,10 +689,9 @@ int main(int argc, char** argv) {
 		fseek(fp, 0, SEEK_SET);
 		char* buf = malloc(sizeof(char) * (length + 1));
 		fread(buf, 1, length, fp);
-		strcat(buf, "\0");
+		buf[length] = 0;
 		fclose(fp);
 		interpret(buf);
-		free(buf);
 	}
 	else {
 		char* example_program = "( print + 1 2 )";

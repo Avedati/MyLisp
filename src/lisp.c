@@ -17,7 +17,7 @@
   @return A pointer to a new lisp struct.
 */
 struct lisp* lisp_create(struct str_it* str_it) {
-	struct lisp* lisp = malloc(sizeof(struct lisp*));
+	struct lisp* lisp = malloc(sizeof(struct lisp));
 	lisp->str_it = str_it;
 	lisp->stack = stack_create();
 	lisp->symbol_table = sym_table_create();

@@ -13,7 +13,7 @@
   @return A new pointer to the stack_item struct.
 */
 struct stack_item* si_create(enum stack_item_type type, void* value) {
-	struct stack_item* si = (struct stack_item*)malloc(sizeof(struct stack_item*));
+	struct stack_item* si = (struct stack_item*)malloc(sizeof(struct stack_item));
 	si->type = type;
 	si->value = value;
 	return si;
@@ -55,7 +55,6 @@ void si_print(struct stack_item* s) {
   @param s A pointer to the stack_item struct.
 */
 void si_destroy(struct stack_item* s) {
-	free(s->value);
 	free(s);
 }
 
@@ -70,7 +69,7 @@ void si_destroy(struct stack_item* s) {
   @return A new pointer to the stack struct.
 */
 struct stack* stack_create(void) {
-	struct stack* s = (struct stack*)malloc(sizeof(struct stack*));
+	struct stack* s = (struct stack*)malloc(sizeof(struct stack));
 	s->items = malloc(0);
 	s->len = 0;
 	s->size = 0;
